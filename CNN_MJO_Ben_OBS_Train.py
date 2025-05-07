@@ -1,7 +1,7 @@
 # ## CNN for MJO Index Prediciton 
 # ## Transfer Learning (Step 2)
 # #### Ben Crair
-# #### Mar. 6th, 2025
+# #### May 6th, 20225
 
 deBug = True
 
@@ -80,7 +80,6 @@ print(data.shape)
 # define batch size
 batch_size = 121
 
-
 # Define dataset class
 
 class OBSDataset(torch.utils.data.Dataset):
@@ -121,7 +120,6 @@ train_dataset_1 = torch.utils.data.Subset(train_data_1, list(range(0, train_len)
 val_dataset_1 = torch.utils.data.Subset(train_data_1, list(range(train_len, N)))
 test_dataset_1 = OBSDataset(test_x_1, test_y_1)
 
-# not sure about pinned memory
 train_dataloader1 = torch.utils.data.DataLoader(train_dataset_1, batch_size=batch_size, shuffle = True, pin_memory=False)
 val_dataloader1 = torch.utils.data.DataLoader(val_dataset_1, batch_size=batch_size, shuffle = True, pin_memory=False)
 
@@ -158,7 +156,6 @@ train_dataset_2 = torch.utils.data.Subset(train_data_2, list(range(0, train_len)
 val_dataset_2 = torch.utils.data.Subset(train_data_2, list(range(train_len, N)))
 test_dataset_2 = OBSDataset(test_x_2, test_y_2)
 
-# not sure about pinned memory
 train_dataloader2 = torch.utils.data.DataLoader(train_dataset_2, batch_size=batch_size, shuffle = True, pin_memory=False)
 val_dataloader2 = torch.utils.data.DataLoader(val_dataset_2, batch_size=batch_size, shuffle = True, pin_memory=False)
 test_dataloader2 = torch.utils.data.DataLoader(test_dataset_2, batch_size=batch_size, shuffle = False, pin_memory=False)
@@ -188,7 +185,6 @@ test_y_3  = target[j*pct:(j+1)*pct]
 test_t_3  = np.shape(test_y_3)[0] # time-dim of the test dataset
 
 
-
 train_data_3 = OBSDataset(train_x_3, train_y_3)
 N = len(train_data_3)
 train_len = int(N * 0.8)
@@ -198,7 +194,6 @@ val_dataset_3 = torch.utils.data.Subset(train_data_3, list(range(train_len, N)))
 
 test_dataset_3 = OBSDataset(test_x_3, test_y_3)
 
-# not sure about pinned memory
 train_dataloader3 = torch.utils.data.DataLoader(train_dataset_3, batch_size=batch_size, shuffle = True, pin_memory=False)
 val_dataloader3 = torch.utils.data.DataLoader(val_dataset_3, batch_size=batch_size, shuffle = True, pin_memory=False)
 test_dataloader3 = torch.utils.data.DataLoader(test_dataset_3, batch_size=batch_size, shuffle = False, pin_memory=False)
@@ -306,7 +301,7 @@ for index, round in enumerate(train_val_rounds):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001, factor=0.5, mode='min')
     loss_fn = torch.nn.MSELoss()
 
-        
+    # define early stopping class
     class EarlyStopping:
         def __init__(self, threshold, patience):
             self.threshold = threshold
@@ -372,8 +367,6 @@ for index, round in enumerate(train_val_rounds):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            #note: need to change based on size of dataset!
-            # we step LR scheduler every ~10,000 iterations
 
             total_train_loss += loss.item() * batch_data.size(0)
         avg_train_loss = total_train_loss / len(train_dataloader.dataset)
@@ -467,13 +460,11 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"CNNMJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Train.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", tot - val_ts[index] - test_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoTrainPred    = create_NC.createVariable("mjoTrainPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin et al. (NPJCAS 2024)
     mjoTrainPred[:] = all_train_preds
     mjoTrainTagt    = create_NC.createVariable("mjoTrainTagt", "f4", ("time","var",))  # (ASXM)
     mjoTrainTagt[:] = all_train_targets
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
+
 
     create_NC.close()
 
@@ -483,13 +474,10 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"CNNMJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Val.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", val_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoValPred    = create_NC.createVariable("mjoValPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin et al. (NPJCAS 2024)
     mjoValPred[:] = all_val_preds
     mjoValTagt    = create_NC.createVariable("mjoValTagt", "f4", ("time","var",))  # (ASXM)
     mjoValTagt[:] = all_val_targets                                                         # (ASXM)
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
 
     create_NC.close()
 
@@ -499,13 +487,10 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"CNNMJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Test.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", test_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoTestPred    = create_NC.createVariable("mjoTestPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin et al. (NPJCAS 2024)
     mjoTestPred[:] = all_test_preds
     mjoTestTagt    = create_NC.createVariable("mjoTestTagt", "f4", ("time","var",))  # (ASXM)
     mjoTestTagt[:] = all_test_targets                                                         # (ASXM)
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
 
     create_NC.close()
 

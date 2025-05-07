@@ -4,7 +4,7 @@
 # ## ViT for MJO Index Prediciton - OBS Train
 # ## Transfer Learning (Step 2)
 # #### Ben Crair
-# #### May 2nd, 2025
+# #### May 6th, 2025
 
 
 deBug = True
@@ -28,7 +28,6 @@ seed_num = 1
 
 # Above is from collaborators
 
-
 #imports
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,6 +38,7 @@ import os
 import random
 import copy
 
+# setup random seed
 np.random.seed(seed_num)
 random.seed(seed_num)
 torch.manual_seed(seed_num)
@@ -48,9 +48,7 @@ torch.cuda.is_available()
 
 device = torch.device("cpu" if not torch.cuda.is_available() else "cuda")
 
-
 # ### Load in Data for Transfer Learning (Section B)
-
 
 # read data: (time,lat,lon) and (time)
 leadTm = 15 # [SXM-ensemble-change]
@@ -81,16 +79,13 @@ if deBug:
   print("data.shape   = ", data.shape,   "\n")
   print("target.shape = ", target.shape, "\n")
 
-
 # Above is data loading code from collborators.
-
 
 # convert data into order expected by Pytorch
 data = data.transpose(0,3,1,2)
 print(data.shape)
 
 # define batch size
-
 batch_size = 121
 
 
@@ -184,7 +179,6 @@ if deBug:
   print("test_t_2        = ", test_t_2)
 
 
-
 #for round 3
 j = 1
 pct = 2036
@@ -222,14 +216,11 @@ if deBug:
   print("test_y_3.shape  = ", test_y_3.shape)
   print("test_t_3        = ", test_t_3)
 
-
-
 train_val_rounds = [[train_dataloader1, val_dataloader1], [train_dataloader2, val_dataloader2], [train_dataloader3, val_dataloader3]]
 train_val_test_rounds = [[train_dataloader1, val_dataloader1, test_dataloader1], [train_dataloader2, val_dataloader2, test_dataloader2], [train_dataloader3, val_dataloader3, test_dataloader3]]
 
 
 # ### Section C: ViT Architecture
-
 
 #basic training
 
@@ -241,7 +232,6 @@ lr_warmup_length = 5
 
 
 # ### Seciton D/E: Compile and Training
-
 
 #loop over rounds
 
@@ -283,7 +273,7 @@ for index, round in enumerate(train_val_rounds):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001, factor = 0.5, mode='min')
     loss_fn = torch.nn.MSELoss()
 
-
+    # define early stopping class
     class EarlyStopping:
         def __init__(self, threshold, patience):
             self.threshold = threshold
@@ -321,7 +311,6 @@ for index, round in enumerate(train_val_rounds):
         
         avg_train_loss = total_train_loss / len(train_dataloader.dataset)
 
-     
         total_val_loss = 0.0
         for batch_data, batch_target in val_dataloader:
 
@@ -346,12 +335,9 @@ for index, round in enumerate(train_val_rounds):
             optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001, factor = 0.5, mode='min')
 
-
-               
         for batch_data, batch_target in train_dataloader:
 
             model.train()
-
 
             y = model(batch_data)
             # Loss
@@ -363,7 +349,6 @@ for index, round in enumerate(train_val_rounds):
             total_train_loss += loss.item() * batch_data.size(0)
         avg_train_loss = total_train_loss / len(train_dataloader.dataset)
 
-    
         model.eval()
         total_val_loss = 0.0
         with torch.no_grad():
@@ -394,8 +379,6 @@ for index, round in enumerate(train_val_rounds):
     torch.save(model, "/home/bec32/project/ML_for_MJO/ViT/Ensemble_Results/Result_02/ViTMJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_round"+str(index + 1)+'.pth')
     compiled_train_losses.append(train_losses)
     compiled_val_losses.append(val_losses)
-
-
 
 
 # ### Section F: Compute Final Predictions
@@ -452,13 +435,11 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"ViTMJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Train.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", tot - val_ts[index] - test_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoTrainPred    = create_NC.createVariable("mjoTrainPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin etal. (NPJCAS 2024)
     mjoTrainPred[:] = all_train_preds
     mjoTrainTagt    = create_NC.createVariable("mjoTrainTagt", "f4", ("time","var",))  # (ASXM)
     mjoTrainTagt[:] = all_train_targets
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
+
    
     create_NC.close()
 
@@ -468,14 +449,11 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"ViTMJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Val.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", val_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoValPred    = create_NC.createVariable("mjoValPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin et al. (NPJCAS 2024)
     mjoValPred[:] = all_val_preds
     mjoValTagt    = create_NC.createVariable("mjoValTagt", "f4", ("time","var",))  # (ASXM)
     mjoValTagt[:] = all_val_targets                                                         # (ASXM)
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
-   
+
     create_NC.close()
     
     os.system("rm -rf " + dirSave + "ViTMJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Test.nc")
@@ -484,13 +462,11 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"ViTMJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Test.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", test_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoTestPred    = create_NC.createVariable("mjoTestPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin et al. (NPJCAS 2024)
     mjoTestPred[:] = all_test_preds
     mjoTestTagt    = create_NC.createVariable("mjoTestTagt", "f4", ("time","var",))  # (ASXM)
     mjoTestTagt[:] = all_test_targets                                                         # (ASXM)
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
+
    
     create_NC.close()
 

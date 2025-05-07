@@ -4,14 +4,13 @@
 # ## ViT for MJO Index Prediciton with Current Index - MDL Train 
 # ## Normal Learning (Part 1)
 # #### Ben Crair
-# #### May 2nd, 2025
+# #### May 6th, 2025
 
 
 deBug = True
 
 
 # ### Section A: Parameters
-
 
 tot = 43076
 lat = 30
@@ -30,6 +29,7 @@ from netCDF4 import Dataset
 from vit_pytorch import ViT
 import random
 
+# setup random seed
 np.random.seed(seed_num)
 random.seed(seed_num)
 torch.manual_seed(seed_num)
@@ -110,7 +110,6 @@ mdl_train_dataset, mdl_test_dataset = torch.utils.data.random_split(dataset, [md
 
 batch_size = 121
 
-# not sure about pinned memory
 train_dataloader = torch.utils.data.DataLoader(mdl_train_dataset, batch_size=batch_size, shuffle = True, pin_memory=False)
 test_dataloader = torch.utils.data.DataLoader(mdl_test_dataset, batch_size=batch_size, shuffle = False, pin_memory=False)
 
@@ -145,6 +144,7 @@ base_vit = ViT(
     emb_dropout=0.1
 )
 
+# define class to append current index to transformer ViT output
 class ViTWithCurrentIndex(torch.nn.Module):
     def __init__(self, base_vit):
         super().__init__()
@@ -168,13 +168,10 @@ model = ViTWithCurrentIndex(base_vit).to(device)
 
 
 # Hyperparameters
-#maybe tre 0.001
 lr = 0.0005
 epochs = 500
 
-
 # ### Section D: Compile
-
 
 batches_per_datset = len(train_dataloader)
 print(f"batches per dataset: {batches_per_datset}")
@@ -189,7 +186,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001, factor = 0.5, mode='min')
 loss_fn = torch.nn.MSELoss()
 
-
+# define early stopping class
 class EarlyStopping:
     def __init__(self, threshold, patience):
         self.threshold = threshold
@@ -215,7 +212,6 @@ print(model)
 
 
 # ### Section E: Train
-
 
 with torch.no_grad():
     model.eval()

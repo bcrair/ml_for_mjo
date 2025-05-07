@@ -1,15 +1,12 @@
 #####!/usr/bin/env python
 #### coding: utf-8
 
-# ## CNN for MJO Index Prediciton - V2
+# ## CNN for MJO Index Prediciton
 # ## Normal Learning (Part 1)
 # #### Ben Crair
-# #### Feb. 5th, 2025
-
-print("CNN for MJO Index Prediciton Normal Learning - Fri May 2nd Run")
+# #### May 6th, 2025
 
 deBug = True
-
 
 # ### Section A: Parameters
 
@@ -27,6 +24,7 @@ from netCDF4 import Dataset
 import os
 import random
 
+#set random seet
 np.random.seed(seed_num)
 random.seed(seed_num)
 torch.manual_seed(seed_num)
@@ -65,9 +63,7 @@ if deBug:
   print("data.shape   = ", data.shape,   "\n")
   print("target.shape = ", target.shape, "\n")
 
-
 # The above code is derived from reference.
-
 
 # convert data into order expected by Pytorch
 data = data.transpose(0,3,1,2)
@@ -99,7 +95,6 @@ mdl_train_dataset, mdl_test_dataset = torch.utils.data.random_split(dataset, [md
 
 batch_size = 121
 
-# not sure about pinned memory
 train_dataloader = torch.utils.data.DataLoader(mdl_train_dataset, batch_size=batch_size, shuffle = True, pin_memory=False)
 test_dataloader = torch.utils.data.DataLoader(mdl_test_dataset, batch_size=batch_size, shuffle = False, pin_memory=False)
 
@@ -181,13 +176,12 @@ test_losses = []
 # send to GPU, if available
 nn = CNN().to(device)
 # Optimizer, note that we use weight decay with coefficinet 1e-5
-# Note: removed weight decay!
 optimizer = torch.optim.Adam(nn.parameters(), lr=lr, weight_decay=1e-4)
 # Exponential Learning Rate Scheduler
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001, factor = 0.5, mode='min')
 loss_fn = torch.nn.MSELoss()
 
-
+# define early stopping class
 class EarlyStopping:
     def __init__(self, threshold, patience):
         self.threshold = threshold

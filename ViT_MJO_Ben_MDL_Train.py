@@ -4,7 +4,7 @@
 # ## ViT for MJO Index Prediciton - MDL Train 
 # ## Normal Learning (Part 1)
 # #### Ben Crair
-# #### May 2nd, 2025
+# #### May 6th, 2025
 
 
 deBug = True
@@ -12,13 +12,11 @@ deBug = True
 
 # ### Section A: Parameters
 
-
 tot = 43076
 lat = 30
 lon= 180
 var = 5
 seed_num = 1
-
 
 # Parameters are set based on the reference code.
 
@@ -30,6 +28,7 @@ from netCDF4 import Dataset
 from vit_pytorch import ViT
 import random
 
+# setup random seeding
 np.random.seed(seed_num)
 random.seed(seed_num)
 torch.manual_seed(seed_num)
@@ -38,7 +37,6 @@ torch.cuda.manual_seed_all(seed_num)
 torch.cuda.is_available()
 
 device = torch.device("cpu" if not torch.cuda.is_available() else "cuda")
-
 
 # ### Section B: Read in Data
 
@@ -70,7 +68,6 @@ if deBug:
   print("data.shape   = ", data.shape,   "\n")
   print("target.shape = ", target.shape, "\n")
 
-
 # The above code is derived from reference.
 
 
@@ -79,7 +76,6 @@ data = data.transpose(0,3,1,2)
 print(data.shape)
 
 # Define dataset class
-
 class MDLDataset(torch.utils.data.Dataset):
     def __init__(self, features, targets):
         self.features = torch.tensor(features).to(device)
@@ -103,12 +99,9 @@ mdl_train_dataset, mdl_test_dataset = torch.utils.data.random_split(dataset, [md
 
 batch_size = 121
 
-# not sure about pinned memory
 train_dataloader = torch.utils.data.DataLoader(mdl_train_dataset, batch_size=batch_size, shuffle = True, pin_memory=False)
 test_dataloader = torch.utils.data.DataLoader(mdl_test_dataset, batch_size=batch_size, shuffle = False, pin_memory=False)
 
-
-# Define dataset class and load data.
 
 # ### Section C: ViT Architecture
 
@@ -146,7 +139,6 @@ epochs = 500
 
 # ### Section D: Compile
 
-
 batches_per_datset = len(train_dataloader)
 print(f"batches per dataset: {batches_per_datset}")
 
@@ -162,7 +154,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001, factor = 0.5, mode='min')
 loss_fn = torch.nn.MSELoss()
 
-
+# define early stopping class
 class EarlyStopping:
     def __init__(self, threshold, patience):
         self.threshold = threshold
@@ -189,7 +181,6 @@ print(model)
 
 # ### Section E: Train
 
-
 with torch.no_grad():
     model.eval()
     total_train_loss = 0.0
@@ -201,7 +192,6 @@ with torch.no_grad():
         total_train_loss += loss.item() * batch_data.size(0)
 
     avg_train_loss = total_train_loss / len(train_dataloader.dataset)
-
 
     total_test_loss = 0.0
     for batch_data, batch_target in test_dataloader:
@@ -245,7 +235,6 @@ for i in range(epochs):
     train_losses.append(avg_train_loss)
     test_losses.append(avg_test_loss)
 
-    
     #step scheduler
     scheduler.step(avg_test_loss)
     print(f"Epoch: {i + 1}, Avg Train Loss: {avg_train_loss}, Avg Test Loss: {avg_test_loss}, LR: {scheduler.get_last_lr()}")

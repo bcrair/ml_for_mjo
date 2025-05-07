@@ -4,7 +4,7 @@
 # ## ViT for MJO Index Prediciton with Current Index - OBS Train
 # ## Transfer Learning (Step 2)
 # #### Ben Crair
-# #### May 2nd, 2025
+# #### May 6th, 2025
 
 
 deBug = True
@@ -28,7 +28,6 @@ seed_num = 1
 
 # Above is from collaborators
 
-
 #imports
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,12 +44,9 @@ torch.manual_seed(seed_num)
 torch.cuda.manual_seed_all(seed_num)
 torch.cuda.is_available()
 
-
 device = torch.device("cpu" if not torch.cuda.is_available() else "cuda")
 
-
 # ### Load in Data for Transfer Learning (Section B)
-
 
 # read data: (time,lat,lon) and (time)
 leadTm = 15 # [SXM-ensemble-change]
@@ -91,13 +87,11 @@ if deBug:
 
 # Above is data loading code from collborators.
 
-
 # convert data into order expected by Pytorch
 data = data.transpose(0,3,1,2)
 print(data.shape)
 
 # define batch size
-
 batch_size = 121
 
 
@@ -245,6 +239,7 @@ train_val_test_rounds = [[train_dataloader1, val_dataloader1, test_dataloader1],
 
 # ### Section C: ViT Architecture
 
+# define class to append current index to transformer ViT output
 class ViTWithCurrentIndex(torch.nn.Module):
     def __init__(self, base_vit):
         super().__init__()
@@ -272,9 +267,7 @@ epochs = 300
 
 lr_warmup_length = 5
 
-
 # ### Seciton D/E: Compile and Training
-
 
 #loop over rounds
 
@@ -318,7 +311,7 @@ for index, round in enumerate(train_val_rounds):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001, factor = 0.5, mode='min')
     loss_fn = torch.nn.MSELoss()
 
-
+    # define early stopping class
     class EarlyStopping:
         def __init__(self, threshold, patience):
             self.threshold = threshold
@@ -380,13 +373,10 @@ for index, round in enumerate(train_val_rounds):
         if i == lr_warmup_length:
             optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, threshold=0.0001, factor = 0.5, mode='min')
-
-
-               
+      
         for batch_data, batch_current_index, batch_target in train_dataloader:
 
             model.train()
-
 
             y = model(batch_data, batch_current_index)
             # Loss
@@ -428,7 +418,6 @@ for index, round in enumerate(train_val_rounds):
     torch.save(model, "/home/bec32/project/ML_for_MJO/ViT_CI/Ensemble_Results/Result_02/ViT_CI_MJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_round"+str(index + 1)+'.pth')
     compiled_train_losses.append(train_losses)
     compiled_val_losses.append(val_losses)
-
 
 
 
@@ -486,13 +475,11 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"ViT_CI_MJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Train.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", tot - val_ts[index] - test_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoTrainPred    = create_NC.createVariable("mjoTrainPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin etal. (NPJCAS 2024)
     mjoTrainPred[:] = all_train_preds
     mjoTrainTagt    = create_NC.createVariable("mjoTrainTagt", "f4", ("time","var",))  # (ASXM)
     mjoTrainTagt[:] = all_train_targets
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
+
    
     create_NC.close()
 
@@ -502,13 +489,11 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"ViT_CI_MJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Val.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", val_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoValPred    = create_NC.createVariable("mjoValPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin et al. (NPJCAS 2024)
     mjoValPred[:] = all_val_preds
     mjoValTagt    = create_NC.createVariable("mjoValTagt", "f4", ("time","var",))  # (ASXM)
     mjoValTagt[:] = all_val_targets                                                         # (ASXM)
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
+
    
     create_NC.close()
     
@@ -518,14 +503,11 @@ for index, round in enumerate(train_val_test_rounds):
     create_NC = Dataset(dirSave+"ViT_CI_MJO_Ben_OBS_leadTm"+str(leadTm)+"_ensm"+str(seed_num)+"_rund"+str(index+1)+"_Prdct_Test.nc", "w", format="NETCDF4")
     create_NC.createDimension("time", test_ts[index])
     create_NC.createDimension("var",  2)
-    #create_NC.createDimension("var3", 3) # (ASXM)
     mjoTestPred    = create_NC.createVariable("mjoTestPred", "f4", ("time","var",))  # CSXM: mjoPred is the ctrb in Shin et al. (NPJCAS 2024)
     mjoTestPred[:] = all_test_preds
     mjoTestTagt    = create_NC.createVariable("mjoTestTagt", "f4", ("time","var",))  # (ASXM)
     mjoTestTagt[:] = all_test_targets                                                         # (ASXM)
-    #mjoInit    = create_NC.createVariable("mjoInit", "f4", ("time","var3",)) # (ASXM)
-    #mjoInit[:] = test_mjo                                                    # (ASXM)
-   
+
     create_NC.close()
 
 print(f"\nCompleted: {__file__}")
